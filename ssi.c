@@ -5,6 +5,7 @@
 #include <unistd.h>
 #include <string.h>
 #define MAX_DIRECTORY_PATH_SIZE 512
+#define MAX_COMMAND_SIZE 1024
 
 /*
 * This function gives the prompt to main.
@@ -14,10 +15,10 @@ char *getPrompt(){
 	char currentDirectory[MAX_DIRECTORY_PATH_SIZE];
 	if(getcwd(currentDirectory,MAX_DIRECTORY_PATH_SIZE)==NULL){
 		puts("ERROR: Directory path name is too long.");
-		return NULL;
+		abort();
 	}
-	char *prompt = malloc(sizeof(char)*(MAX_DIRECTORY_PATH_SIZE+7));
-	strncpy(prompt,"SSI: ",5);
+	char *prompt = malloc(sizeof(char)*(MAX_DIRECTORY_PATH_SIZE+10));
+	strncpy(prompt,"SSI: ",6);
 	strncat(prompt,currentDirectory,MAX_DIRECTORY_PATH_SIZE);
 	strncat(prompt," >",2);
 	return prompt;
@@ -27,7 +28,22 @@ char *getPrompt(){
 * This function reads input from a user
 * and determines what to do based on it.
 */
-void parseLine(char* input){
+void parseInput(char* input){
+	printf("You said: %s",input);
+	char *token = strtok(input, " ");
+
+	//strcmp()
+	switch(token){
+		case "cd":
+			token = strtok(NULL, " ");
+			changeDirectory(token);
+			break;
+		case "bg":
+			backgroundExecution(input);
+			break;
+		default:
+			puts("Error: invalid command.");
+	}
 	return;
 }
 
@@ -35,19 +51,27 @@ void parseLine(char* input){
 * This function changes the current directory.
 * It is called with "cd".
 */
-void changeDirectory(){
+void changeDirectory(char *newDirectory){
+	return;
+}
+
+void backgroundExecution(char *input){
 	return;
 }
 
 int main(){
-	/*
-	char* prompt[MAX_PROMPT_SIZE];
 	while(1){
-		
-		return 0;
-	}
-	*/
-	char *prompt = getPrompt();
-	puts(prompt);
-	free(prompt);	
+		char *prompt = getPrompt();
+		printf("%s ",prompt);
+		free(prompt);
+		char *inputted_command = malloc(sizeof(char)*MAX_COMMAND_SIZE);
+		if (fgets(inputted_command, MAX_COMMAND_SIZE, stdin) == NULL){
+			puts("Error: command is too big. Please enter something smaller");
+			printf("The maximum command size allowed is %d characters.\n",MAX_COMMAND_SIZE);
+			free(inputted_command);
+			continue;
+		}
+		parseInput(inputted_command);
+		free(inputted_command);
+	}	
 }
