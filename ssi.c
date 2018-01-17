@@ -110,6 +110,7 @@ void forkExecution(char *argv[]){
 	//Child process
 	else if(p = 0){
 		execvp(argv[0],argv[1]);
+		//exit()
 	}
 
 	else{
