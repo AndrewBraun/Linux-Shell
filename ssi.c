@@ -1,11 +1,17 @@
 #include <stdlib.h>
 #include <stdio.h>
-//#include <readline/readline.h>
-//#include <readline/history.h>
+#include <readline/readline.h>
+#include <readline/history.h>
 #include <unistd.h>
 #include <string.h>
 #define MAX_DIRECTORY_PATH_SIZE 512
 #define MAX_COMMAND_SIZE 1024
+
+char *getPrompt();
+void parseInput(char* input);
+void changeDirectory(char *argv[]);
+void backgroundExecution(char *argv[]);
+void forkExecution(char *argv[]);
 
 /*
 * This function gives the prompt to main.
@@ -20,7 +26,7 @@ char *getPrompt(){
 	char *prompt = malloc(sizeof(char)*(MAX_DIRECTORY_PATH_SIZE+10));
 	strncpy(prompt,"SSI: ",6);
 	strncat(prompt,currentDirectory,MAX_DIRECTORY_PATH_SIZE);
-	strncat(prompt," >",2);
+	strncat(prompt," > ",3);
 	return prompt;
 }
 
@@ -30,20 +36,36 @@ char *getPrompt(){
 */
 void parseInput(char* input){
 	printf("You said: %s",input);
-	char *token = strtok(input, " ");
 
-	//strcmp()
-	switch(token){
-		case "cd":
-			token = strtok(NULL, " ");
-			changeDirectory(token);
-			break;
-		case "bg":
-			backgroundExecution(input);
-			break;
-		default:
-			puts("Error: invalid command.");
+	char *token = strtok(input, " \n");
+	char *argv[]; //Please add number of possible args.
+	argv[0] = token;
+	for(size_t i = 0;argv[i] != NULL;i++){
+		token = strtok(NULL, " \n");
+		argv[i+1] = token;
 	}
+
+	//Exiting the program
+	if(strcmp(argv[0],"exit")==0){
+		puts("Now exiting the simple shell. Goodbye!");
+		exit(EXIT_SUCCESS);
+	}
+
+	//Changing the directory
+	else if(strcmp(argv[0],"cd")==0){
+		changeDirectory(argv);
+	}
+
+	//Background processing
+	else if(strcmp(argv[0],"bg")==0){
+		backgroundExecution(argv);
+	}
+
+	//Forking and executing
+	else{
+		forkExecution(argv);
+	}
+
 	return;
 }
 
@@ -51,17 +73,56 @@ void parseInput(char* input){
 * This function changes the current directory.
 * It is called with "cd".
 */
-void changeDirectory(char *newDirectory){
+void changeDirectory(char *argv[]){
+	
+	//Home directory
+	if(argv[1]==NULL || strcmp(argv[1],"~")){
+		char *homeDir = getenv();
+		if(chdir(homeDir)==-1){
+			puts("ERROR: Could not change directory.");
+		}
+	}
+
+	//Move up by one directory
+	else if(strcmp(argv[1],"..")){
+		asm("nop");
+	}
+
+	else{
+		
+	}
+
+}
+
+void backgroundExecution(char *argv[]){
 	return;
 }
 
-void backgroundExecution(char *input){
+void forkExecution(char *argv[]){
+
+	pid_t p = fork();
+
+	//Parent process
+	if(p > 0){
+		waitpid(p,NULL,0);
+	}
+
+	//Child process
+	else if(p = 0){
+		execvp(argv[0],argv[1]);
+	}
+
+	else{
+		puts("Error: forking into child process failed.");
+	}
+
 	return;
 }
 
 int main(){
 	while(1){
 		char *prompt = getPrompt();
+		/*
 		printf("%s ",prompt);
 		free(prompt);
 		char *inputted_command = malloc(sizeof(char)*MAX_COMMAND_SIZE);
@@ -71,6 +132,11 @@ int main(){
 			free(inputted_command);
 			continue;
 		}
+		parseInput(inputted_command);
+		free(inputted_command);
+		*/
+		char* inputted_command = readline(prompt);
+		free(prompt);
 		parseInput(inputted_command);
 		free(inputted_command);
 	}	
