@@ -21,8 +21,7 @@ void checkBGProcesses();
 // Linked list structure.
 struct bgprocess{
 	pid_t pid;
-	char *program;
-	char *argument;
+	char *command;
 	struct bgprocess *next;
 };
 
@@ -60,6 +59,20 @@ char *getPrompt(){
 * It also checks on the background processes after it executes the command.
 */
 void parseInput(char* input){
+
+	int isValid = 0;
+	for(size_t i = 0; i < strlen(input); i++){
+		if(isalpha(input[i])){
+			isValid = 1;
+			break;
+		}
+	}
+	if(!isValid){
+		fprintf(stderr,"ERROR: please enter in valid command.\n");
+		return;
+	}
+
+	if(input==NULL || !strcmp(input,"\n") || !strcmp(input,"\0")) return;
 
 	//Splits up the command string into separate arguments.
 	//Leaves the space after the last argument as NULL.
@@ -226,8 +239,25 @@ void backgroundExecution(char *oldArgv[], size_t oldArgvSize){
 		numOfBGProcesses++;
 
 		newProcess->pid = p;
-		newProcess->program = "Process";
-		newProcess->argument = "Argument";
+
+		size_t argvSize = 1024;
+		char *command = malloc(sizeof(char)*argvSize);
+		for(size_t i = 0; newArgv[i] != NULL; i++){
+			if(strlen(command)+strlen(newArgv[i])==argvSize-1){
+				command = realloc(command,sizeof(char)*argvSize*2);
+				argvSize *= 2;
+				if(command == NULL){
+					fprintf(stderr,"ERROR: not enough memory");
+					abort();
+				}
+			}
+			strncat(command,newArgv[i],strlen(newArgv[i]));
+			strncat(command," ",1);
+		}
+
+		printf("Command: %s\n",command);
+
+		newProcess->command = command;
 		newProcess->next = NULL;
 
 		if(rootNode == NULL){
@@ -266,7 +296,7 @@ void listBGProcesses(){
 
 	BGProcessPtr curNode = rootNode;
 	while(curNode != NULL){
-		printf("%d: %s %s",curNode->pid, curNode->program, curNode->argument);
+		printf("%d:  %s\n",curNode->pid, curNode->command);
 		curNode = curNode->next;
 	}
 	printf("Total Background jobs: %zu\n",numOfBGProcesses);
@@ -300,7 +330,7 @@ void checkBGProcesses(){
 			prevNode->next = curNode->next;
 		}
 
-		printf("%u %s %s has finished.",curNode->pid, curNode->program, curNode->argument);
+		printf("%u:  %s has finished.\n",curNode->pid, curNode->command);
 		free(curNode);
 		numOfBGProcesses--;	
 		pidFin = waitpid(0,NULL,WNOHANG);
@@ -322,4 +352,3 @@ int main(){
 		free(inputted_command);
 	}	
 }
-
