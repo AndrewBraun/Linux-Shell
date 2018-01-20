@@ -269,7 +269,7 @@ void listBGProcesses(){
 		printf("%d: %s %s",curNode->pid, curNode->program, curNode->argument);
 		curNode = curNode->next;
 	}
-	printf("Total Background jobs: %zu",numOfBGProcesses);
+	printf("Total Background jobs: %zu\n",numOfBGProcesses);
 }
 
 /*
@@ -315,25 +315,6 @@ int main(){
 
 	while(1){
 
-		/*
-		//Gets string for the prompt.
-		char *prompt = getPrompt();
-		
-		printf("%s ",prompt);
-		free(prompt);
-
-		//Gets the command inputted from the user.
-		char *inputted_command = malloc(sizeof(char)*MAX_COMMAND_SIZE);
-		if (fgets(inputted_command, MAX_COMMAND_SIZE, stdin) == NULL){
-			printf("Error: command is too big. Please enter something smaller.\n");
-			printf("The maximum command size allowed is %d characters.\n",MAX_COMMAND_SIZE);
-			free(inputted_command);
-			continue;
-		}
-		parseInput(inputted_command);
-		free(inputted_command);
-		*/
-		
 		char *prompt = getPrompt();	
 		char* inputted_command = readline(prompt);
 		free(prompt);
