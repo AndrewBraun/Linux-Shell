@@ -7,7 +7,6 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <errno.h>
-#define MAX_COMMAND_SIZE 1024
 
 char *getPrompt();
 void parseInput(char* input);
@@ -25,11 +24,10 @@ struct bgprocess{
 	struct bgprocess *next;
 };
 
-typedef struct bgprocess BGProcess;//Renames bgprocess to BGProcess.
+typedef struct bgprocess BGProcess;//Renames struct bgprocess to BGProcess.
 typedef BGProcess *BGProcessPtr;//Shorthand for *BGProcess.
 
 BGProcessPtr rootNode;//Global root node of linked list of BGProcesses.
-size_t numOfBGProcesses;//Number of background processes currently processing.
 
 /*
 * This function gives the prompt to main.
@@ -60,6 +58,8 @@ char *getPrompt(){
 */
 void parseInput(char* input){
 
+	// This checks if the inputted command has at least one letter.
+	// This prevents the program from crashing if someone just enters a newline.
 	int isValid = 0;
 	for(size_t i = 0; i < strlen(input); i++){
 		if(isalpha(input[i])){
@@ -71,8 +71,6 @@ void parseInput(char* input){
 		fprintf(stderr,"ERROR: please enter in valid command.\n");
 		return;
 	}
-
-	if(input==NULL || !strcmp(input,"\n") || !strcmp(input,"\0")) return;
 
 	//Splits up the command string into separate arguments.
 	//Leaves the space after the last argument as NULL.
@@ -86,6 +84,7 @@ void parseInput(char* input){
 	for(size_t i = 0; argv[i] != NULL; i++){
 		token = strtok(NULL, " \n");
 
+		//Resizes array
 		if(i==argvSize-1){
 			argv = realloc(argv,2*argvSize);
 			argvSize *= 2;
@@ -175,9 +174,11 @@ void changeDirectory(char *argv[]){
 		//newDir is the string containing the new directory.
 		char newDir[strlen(curDir)+strlen(argv[1])+3];
 
+		//Adds the new directory
 		strncpy(newDir,curDir,strlen(curDir));
 		strncat(newDir,"/",1);
 		strncat(newDir,argv[1],strlen(argv[1]));
+
 		if(chdir(newDir)!= 0 ){
 			puts("ERROR: Invalid directory");
 		}	
@@ -230,16 +231,22 @@ void backgroundExecution(char *oldArgv[], size_t oldArgvSize){
 
         //If this is the parent process...
         if(p > 0){
+
+		//This is the new node representing the new background process.
 		BGProcessPtr newProcess = malloc(sizeof(BGProcess));
+		//Aborts the program if there's no more room.
 		if(newProcess == NULL){
 			fprintf(stderr,"ERROR: Out of memory");
 			abort();
 		}
 
-		numOfBGProcesses++;
-
+		//Assigns the pid to the new node.
 		newProcess->pid = p;
 
+		//Assigns and formats command string held by the new node.
+		//It specifies the program running and the arguments sent to it.
+		//It does this by using the list of args passed to this function
+		//and changing it from an array of strings to one string.
 		size_t argvSize = 1024;
 		char *command = malloc(sizeof(char)*argvSize);
 		for(size_t i = 0; newArgv[i] != NULL; i++){
@@ -255,11 +262,11 @@ void backgroundExecution(char *oldArgv[], size_t oldArgvSize){
 			strncat(command," ",1);
 		}
 
-		printf("Command: %s\n",command);
-
+		//Assigns next node in linked list to the new node.
 		newProcess->command = command;
 		newProcess->next = NULL;
 
+		//If this is the only process, make it the root node.
 		if(rootNode == NULL){
 			rootNode = newProcess;
 			return;
@@ -294,10 +301,14 @@ void backgroundExecution(char *oldArgv[], size_t oldArgvSize){
 */
 void listBGProcesses(){
 
+	size_t numOfBGProcesses = 0;
+
+	//Goes through every node and prints it out.
 	BGProcessPtr curNode = rootNode;
 	while(curNode != NULL){
 		printf("%d:  %s\n",curNode->pid, curNode->command);
 		curNode = curNode->next;
+		numOfBGProcesses++;
 	}
 	printf("Total Background jobs: %zu\n",numOfBGProcesses);
 }
@@ -309,12 +320,13 @@ void listBGProcesses(){
 void checkBGProcesses(){
 
 	//Nothing to check of there are no background processes.
-	if (!numOfBGProcesses) return;
+	if (rootNode==NULL) return;
 
 	pid_t pidFin = waitpid(0,NULL,WNOHANG);
 
 	while(pidFin > 0){
-	
+
+		//Finds the terminated node and removes it from the linked list.	
 		BGProcessPtr curNode = rootNode;
 		BGProcessPtr prevNode;
 		while(curNode->pid != pidFin){
@@ -331,8 +343,8 @@ void checkBGProcesses(){
 		}
 
 		printf("%u:  %s has finished.\n",curNode->pid, curNode->command);
+		//Removes the terminated node from memory.
 		free(curNode);
-		numOfBGProcesses--;	
 		pidFin = waitpid(0,NULL,WNOHANG);
 	}
 }
@@ -341,7 +353,6 @@ int main(){
 
 	//Initializes root node of linked list to NULL.
 	rootNode = NULL;
-	numOfBGProcesses = 0;
 
 	while(1){
 
